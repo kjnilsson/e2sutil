@@ -87,11 +87,20 @@ module MidiInternal =
            yield! length
            yield! eventData |]
 
+let trailer =
+  [ 0, Midi (0uy, ControlChange (0x7Buy, 0uy)) //all notes off
+    0, Meta EndOfTrack ]
 ///renders a format 0 midi file from a list of MtrkEvents
 ///with a ticks per quarter note of 384 (96 * 4)
 let renderFormat0 (events: MtrkEvent list) =
     [| yield! MidiInternal.format0Header
        yield! MidiInternal.trackChunks events |]
+
+let renderFormat1 (tracks: MtrkEvent list list) =
+    let len = List.length tracks
+    [|  yield! MidiInternal.format1Header (byte len)
+        for events in tracks do
+           yield! MidiInternal.trackChunks (events @ trailer) |]
 
 //http://www.skytopia.com/project/articles/midi.html
 #if INTERACTIVE

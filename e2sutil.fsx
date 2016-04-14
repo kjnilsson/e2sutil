@@ -66,51 +66,25 @@ let part, one = e2sParse vox |> snd |> List.head
 
 stepsToMidi 0uy one
 
-
 #endif
-(*
-<Track Chunk> = <chunk type><length><MTrk event>+
-The syntax of an MTrk event is very simple:
-<MTrk event> = <delta-time><event>
-*)
-
-//tempo and time sig - meta event
-
-//track chunks
 
 
-(*
-
-ppq = 96 * 4 (4/4) = 384
-
-IDI DOCS
-http://sites.uci.edu/camp2014/2014/05/19/timing-in-midi-files/
-*)
-//MSB
-let isSet bit (x: byte) =
-    if x = (x ||| (1uy <<< bit)) then true
-    else false
-
-let setBit bit (x: byte) =
-    x ||| (1uy <<< (7 - bit))
-
-let clearBit bit (x: byte) =
-    x ^^^ (1uy <<< (7 - bit))
-
-let bitPrint (x: byte) =
-    "00000000"
-    |> String.mapi (fun i _ ->
-        if isSet (7-i) x then '1'
-        else '0')
-    |> sprintf "0b%suy"
-
-(*result[3] = (byte)(n & 0x7f);
-n >>= 7;  
-
-for (int i = 2; (i >= 0) || (n > 0); i--)
-{
-    result[i] = ((byte)(n & 0x7f)) | 0x80;
-    n >>= 7;
-}
-*)        
-///http://codereview.stackexchange.com/questions/88604/encoding-variable-length-quanties-for-midi
+[<EntryPoint>]
+let main args =
+    match Array.toList args with
+    | ["midi"; path] ->
+        let fi = System.IO.FileInfo(path)
+        let data = System.IO.File.ReadAllBytes fi.FullName
+        let fileName = fi.Name
+        let pat, parts = e2sParse data
+        let tracks = 
+            parts 
+            |> List.map (fun (part, steps) ->
+                stepsToMidi (byte part.Num) steps)
+        let midi = Midi.renderFormat1 tracks
+        System.IO.File.WriteAllBytes (fileName + ".MID", midi)
+        0
+    | _ ->
+        printfn "not supported"
+        0
+        
