@@ -73,15 +73,20 @@ let e2sParse (data: byte[]) =
         |> List.map (fun off -> data.[off .. off + 0x30])    
         |> List.mapi Part.parse
     let seqs =
-        seqOffsets
-        |> List.map (fun off -> 
-            stepOffsetsRelative |> List.map ((+) off)
-            |> List.map (fun o ->
-                Step.parse data.[o .. o + 11]))
-    pat, List.zip parts seqs
+        List.zip parts seqOffsets
+        |> List.take (int pat.Length + 1)
+        |> List.map (fun (part, off) -> 
+            let lastStep =
+                match part.LastStep with
+                | 0uy -> 16
+                | x -> int x
+            part, 
+                stepOffsetsRelative 
+                |> List.take lastStep
+                |> List.map ((+) off)
+                |> List.map (fun o -> Step.parse data.[o .. o + 11]))
+    pat, seqs
 
-//    |> List.filter (snd >> hasNotes)
-        
 
 #if INTERACTIVE
 open System
@@ -91,7 +96,7 @@ let vox = File.ReadAllBytes (__SOURCE_DIRECTORY__ + "/data/025_Vox.e2spat")
 Pattern.parse vox
 Pattern.parse data
 
-e2sParse vox
+e2sParse vox |> snd |> List.head |> snd |> List.length
 //|> List.filter (snd >> hasNotes)
 
 #endif
