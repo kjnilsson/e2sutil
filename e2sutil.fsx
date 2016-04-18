@@ -45,6 +45,8 @@ let stepsToMidi channel (steps: Step list) : MtrkEvent list =
 
             
 #if INTERACTIVE
+#load "test.fsx"
+open Midi
 let step notes vel gate =
     { HasNotes = List.length notes > 0 
       Gate = gate
@@ -53,17 +55,46 @@ let step notes vel gate =
       Chord = 0uy
       Remains = Array.empty }
 
+let noteOn c n v =
+    Midi(c, NoteOn (Note(n, v)))
+let noteOff c n v =
+    Midi(c, NoteOff (Note(n, v)))
+
+let test_single_step_with_gate () =
+    let expected =
+        [ 0, noteOn 0uy 71uy 96uy
+          90, noteOff 0uy 71uy 96uy ]
+    [ step [71uy] 96uy (Gate 90uy) ]
+    |> stepsToMidi 0uy
+    |> assertEqual expected
+
+let test_with_tie_then_gate () =
+    let expected =
+        [ 0, noteOn 0uy 71uy 96uy
+          96, noteOn 0uy 69uy 96uy
+          96 + 96, noteOff 0uy 69uy 96uy
+          96 + 96 + 90, noteOff 0uy 71uy 96uy ]
+    [ step [71uy] 96uy Tie
+      step [71uy;69uy] 96uy Tie 
+      step [71uy] 96uy (Gate 90uy) ]
+    |> stepsToMidi 0uy
+    |> assertEqual expected
+
+test ["single note with gate", test_single_step_with_gate]
+test ["single note with tie + gate", test_with_tie_then_gate]
+
+#endif
+
+#if INTERACTIVE
+
 [ step [71uy] 96uy (Gate 90uy)
   step [69uy] 96uy Tie
   step [69uy; 68uy] 96uy Tie
   step [69uy] 96uy (Gate 30uy) ]
 |> stepsToMidi 1uy 
 
-         
 let vox = System.IO.File.ReadAllBytes (__SOURCE_DIRECTORY__ + "/data/025_Vox.e2spat")
-
 let part, one = e2sParse vox |> snd |> List.head
-
 stepsToMidi 0uy one
 
 #endif
